@@ -13,7 +13,7 @@ A small, working website support assistant: source-backed answers, contextual fo
 
 ## Run locally
 
-Requires Node.js 22 or newer.
+Use Node.js 24 (the deployment runtime).
 
 ```sh
 npm ci
@@ -36,7 +36,7 @@ Chat UI / embedded iframe
 ```
 
 - **Next.js / React / TypeScript** for the website, embed, and server route.
-- **AI SDK 7** with the OpenAI-compatible provider and runtime Zod validation of generated JSON. Default model: `LongCat-2.5`, verified against LongCat’s official documentation. Override with `MODEL_ID`. Thinking is disabled for concise support responses.
+- **LongCat Responses API** with strict JSON Schema output and runtime Zod validation. Default model: `LongCat-2.5`, verified against LongCat’s official documentation. Override with `MODEL_ID`. Reasoning effort is set to none for concise support responses; only the final answer is rendered.
 - **Small-corpus retrieval** in `lib/knowledge.ts`. This is keyword retrieval with recent user-message context, not a vector database or a claim of semantic-search coverage.
 - **Grounding validation** rejects unknown source IDs, sources not retrieved, and non-verbatim quotations. An answered response without a valid citation becomes a handoff. Exact quotes help inspection but do not mathematically prove every generated claim; realistic evaluation remains necessary.
 - **Privacy**: browser memory only for chat history; no app database or analytics. Messages are sent to the model provider, whose processing and logging policies apply. Only sample questions should be used. Application error logs exclude prompts, secrets, and upstream response bodies.
@@ -45,7 +45,7 @@ Chat UI / embedded iframe
 
 Import this repository as a Next.js project. Use Node.js 24. Set `MODEL_API_KEY` as a Secret in the Production environment. Optional `MODEL_ID` and `MODEL_BASE_URL` override the documented LongCat defaults. No provider key belongs in the browser. This implementation calls LongCat directly; it does not depend on Vercel AI Gateway billing.
 
-The application bounds request size, conversation history, model output, timeout, retries, and includes a 12-request/minute **instance-local** throttle. LongCat account quotas and billing apply; a Vercel AI Gateway budget does not cap direct LongCat calls. This is a demo-level throttle, not a globally consistent abuse-control service. A client production launch needs distributed rate limiting, bot protection, observability, an evaluation set, and an approved support destination.
+The application bounds request size, conversation history, model output and timeout, and includes a 12-request/minute **instance-local** throttle. LongCat account quotas and billing apply; a Vercel AI Gateway budget does not cap direct LongCat calls. This is a demo-level throttle, not a globally consistent abuse-control service. A client production launch needs distributed rate limiting, bot protection, observability, an evaluation set, and an approved support destination.
 
 ## Embed on another website
 
@@ -63,6 +63,8 @@ The loader creates an isolated Shadow DOM launcher and a lazily loaded iframe. C
 npm test
 npm run typecheck
 npm run build
+# Invokes the live model on your own deployment:
+node scripts/evaluate-live.mjs
 ```
 
 The focused tests cover retrieval with follow-up context, missing knowledge, input constraints, quotation validation, and truthful handoff exports. Live model output must also be evaluated on the deployed site because it is nondeterministic.
