@@ -18,7 +18,7 @@ Requires Node.js 22 or newer.
 ```sh
 npm ci
 cp .env.example .env.local
-# Configure AI_GATEWAY_API_KEY in .env.local using your secret manager.
+# Configure MODEL_API_KEY in .env.local using your secret manager.
 npm run dev
 ```
 
@@ -30,22 +30,22 @@ Without local model credentials, the UI, articles, and website embed still work;
 Chat UI / embedded iframe
   → POST /api/chat (validated and bounded conversation)
   → Context-aware keyword retrieval over 8 sample articles
-  → Vercel AI Gateway → live language model
+  → LongCat OpenAI-compatible API → live language model
   → Structured answer, exact supporting quotations, follow-ups, optional handoff
   → Citation validation → response and original source viewer
 ```
 
 - **Next.js / React / TypeScript** for the website, embed, and server route.
-- **AI SDK 7** structured generation. Default model: `anthropic/claude-haiku-5.5`, verified against the Gateway catalog at implementation time. Override with `AI_GATEWAY_MODEL`.
+- **AI SDK 7** with the OpenAI-compatible provider and runtime Zod validation of generated JSON. Default model: `LongCat-2.5`, verified against LongCat’s official documentation. Override with `MODEL_ID`. Thinking is disabled for concise support responses.
 - **Small-corpus retrieval** in `lib/knowledge.ts`. This is keyword retrieval with recent user-message context, not a vector database or a claim of semantic-search coverage.
 - **Grounding validation** rejects unknown source IDs, sources not retrieved, and non-verbatim quotations. An answered response without a valid citation becomes a handoff. Exact quotes help inspection but do not mathematically prove every generated claim; realistic evaluation remains necessary.
 - **Privacy**: browser memory only for chat history; no app database or analytics. Messages are sent to the model provider, whose processing and logging policies apply. Only sample questions should be used. Application error logs exclude prompts, secrets, and upstream response bodies.
 
 ## Deploy on Vercel
 
-Import this repository as a Next.js project. Use Node.js 24. Vercel project OIDC authenticates AI Gateway automatically; the team needs an active Gateway credit balance and access to the selected model. Optional `AI_GATEWAY_MODEL` selects another compatible model. No provider key belongs in the browser.
+Import this repository as a Next.js project. Use Node.js 24. Set `MODEL_API_KEY` as a Secret in the Production environment. Optional `MODEL_ID` and `MODEL_BASE_URL` override the documented LongCat defaults. No provider key belongs in the browser. This implementation calls LongCat directly; it does not depend on Vercel AI Gateway billing.
 
-The project should have an AI Gateway **project-scoped spend cap**. The application also bounds request size, conversation history, model output, timeout, retries, and includes a 12-request/minute **instance-local** throttle. This is a demo-level throttle, not a globally consistent abuse-control service. A client production launch needs distributed rate limiting, bot protection, observability, an evaluation set, and an approved support destination.
+The application bounds request size, conversation history, model output, timeout, retries, and includes a 12-request/minute **instance-local** throttle. LongCat account quotas and billing apply; a Vercel AI Gateway budget does not cap direct LongCat calls. This is a demo-level throttle, not a globally consistent abuse-control service. A client production launch needs distributed rate limiting, bot protection, observability, an evaluation set, and an approved support destination.
 
 ## Embed on another website
 
