@@ -54,14 +54,8 @@ export async function POST(request: Request) {
       { error: "Send a question of up to 2,000 characters." },
       400,
     );
-  if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN)
-    return respond(
-      {
-        error:
-          "Live AI is not configured in this environment. You can still explore the knowledge library and website preview.",
-      },
-      503,
-    );
+  // Let the SDK resolve credentials per request. On Vercel, OIDC arrives
+  // through invocation context, not necessarily an environment variable.
   const sources = retrieveArticles(parsed.data.messages);
   const started = Date.now();
   try {

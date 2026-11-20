@@ -1,5 +1,7 @@
 # Relay Support Studio
 
+[Live demo](https://relay-support-studio.vercel.app) · [Website embed preview](https://relay-support-studio.vercel.app/website)
+
 A small, working website support assistant: source-backed answers, contextual follow-ups, and downloadable handoff drafts. Relay is a fictional collaboration product. All product policies and prices are sample content.
 
 ## What to try
