@@ -8,3 +8,5 @@ test-results/
 artifacts/
 private/
 playwright-report/
+.playwright-cli/
+output/

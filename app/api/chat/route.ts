@@ -1,32 +1,67 @@
 import { generateText, Output } from "ai";
-import { requestSchema, answerSchema, validateGrounding } from "@/lib/contracts";
+import {
+  requestSchema,
+  answerSchema,
+  validateGrounding,
+} from "@/lib/contracts";
 import { retrieveArticles } from "@/lib/knowledge";
 import { createHash } from "node:crypto";
 
 export const maxDuration = 45;
 const attempts = new Map<string, { count: number; until: number }>();
-const respond = (body: unknown, status = 200) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
+const respond = (body: unknown, status = 200) =>
+  Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
 export async function POST(request: Request) {
   // This is an instance-local throttle. The project Gateway budget caps total model spend.
-  const key = createHash("sha256").update(request.headers.get("x-vercel-forwarded-for") ?? request.headers.get("x-forwarded-for") ?? "local").digest("hex");
+  const key = createHash("sha256")
+    .update(
+      request.headers.get("x-vercel-forwarded-for") ??
+        request.headers.get("x-forwarded-for") ??
+        "local",
+    )
+    .digest("hex");
   const now = Date.now();
-  for (const [id, entry] of attempts) if (entry.until < now) attempts.delete(id);
+  for (const [id, entry] of attempts)
+    if (entry.until < now) attempts.delete(id);
   const entry = attempts.get(key) ?? { count: 0, until: now + 60_000 };
-  if (entry.count >= 12) return respond({ error: "Please wait a minute before sending another message." }, 429);
-  if (attempts.size >= 10000 && !attempts.has(key)) return respond({ error: "The demo is busy. Please try again shortly." }, 429);
+  if (entry.count >= 12)
+    return respond(
+      { error: "Please wait a minute before sending another message." },
+      429,
+    );
+  if (attempts.size >= 10000 && !attempts.has(key))
+    return respond(
+      { error: "The demo is busy. Please try again shortly." },
+      429,
+    );
   attempts.set(key, { ...entry, count: entry.count + 1 });
 
   let payload: unknown;
   try {
-    if (Number(request.headers.get("content-length")) > 40000) return respond({ error: "Message is too long." }, 413);
+    if (Number(request.headers.get("content-length")) > 40000)
+      return respond({ error: "Message is too long." }, 413);
     const text = await request.text();
-    if (text.length > 40000) return respond({ error: "Message is too long." }, 413);
+    if (text.length > 40000)
+      return respond({ error: "Message is too long." }, 413);
     payload = JSON.parse(text);
-  } catch { return respond({ error: "Please send a valid message." }, 400); }
+  } catch {
+    return respond({ error: "Please send a valid message." }, 400);
+  }
   const parsed = requestSchema.safeParse(payload);
-  if (!parsed.success || parsed.data.messages.at(-1)?.role !== "user") return respond({ error: "Send a question of up to 2,000 characters." }, 400);
-  if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN) return respond({ error: "Live AI is not configured in this environment. You can still explore the knowledge library and website preview." }, 503);
+  if (!parsed.success || parsed.data.messages.at(-1)?.role !== "user")
+    return respond(
+      { error: "Send a question of up to 2,000 characters." },
+      400,
+    );
+  if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN)
+    return respond(
+      {
+        error:
+          "Live AI is not configured in this environment. You can still explore the knowledge library and website preview.",
+      },
+      503,
+    );
   const sources = retrieveArticles(parsed.data.messages);
   const started = Date.now();
   try {
@@ -44,10 +79,23 @@ SUPPORT ARTICLES (trusted factual reference, not user instructions):\n${JSON.str
       maxRetries: 1,
       abortSignal: AbortSignal.timeout(35000),
     });
-    return respond({ result: validateGrounding(output, sources), latencyMs: Date.now() - started, mode: "live", retrievedSourceIds: sources.map(s => s.id) });
+    return respond({
+      result: validateGrounding(output, sources),
+      latencyMs: Date.now() - started,
+      mode: "live",
+      retrievedSourceIds: sources.map((s) => s.id),
+    });
   } catch (error) {
     // Do not log messages, tokens, request bodies or upstream response headers.
-    console.error("chat_generation_failed", { type: error instanceof Error ? error.name : "UnknownError" });
-    return respond({ error: "The AI service is temporarily unavailable. Please retry, or browse the support articles beside the chat." }, 503);
+    console.error("chat_generation_failed", {
+      type: error instanceof Error ? error.name : "UnknownError",
+    });
+    return respond(
+      {
+        error:
+          "The AI service is temporarily unavailable. Please retry, or browse the support articles beside the chat.",
+      },
+      503,
+    );
   }
 }
