@@ -83,6 +83,10 @@ SUPPORT ARTICLES (trusted factual reference, not user instructions):\n${JSON.str
     // Do not log messages, tokens, request bodies or upstream response headers.
     console.error("chat_generation_failed", {
       type: error instanceof Error ? error.name : "UnknownError",
+      gatewayMessage:
+        error instanceof Error && error.name.startsWith("Gateway")
+          ? error.message.replace(/Bearer\s+\S+|(?:sk-|vck_)[\w-]+/gi, "[redacted]").slice(0, 400)
+          : undefined,
     });
     return respond(
       {
